@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+package timeline;
+
+option go_package = "github.com/tjamir/flisol-2025/microblog/timeline-service/proto";
+
+service TimelineService {
+  rpc GetTimeline(GetTimelineRequest) returns (GetTimelineResponse);
+}
+
+message GetTimelineRequest {
+  string user_id = 1;
+  int32 limit = 2;
+  string cursor = 3;
+}
+
+message GetTimelineResponse {
+  repeated Post posts = 1;
+  string next_cursor = 2;
+}
+
+message Post {
+  string id = 1;
+  string user_id = 2;
+  string content = 3;
+  string created_at = 4;
+}

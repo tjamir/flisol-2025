@@ -1,0 +1,119 @@
+version: '3.8'
+
+services:
+  user-service:
+    build:
+      context: .  
+      dockerfile: user-service/Dockerfile
+    ports:
+      - "8081:8081"
+    environment:
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_USER=db
+      - DB_PASSWORD=db
+      - DB_NAME=users
+      - DATABASE_URL=postgres://user:pass@db:5432/microblog?sslmode=disable
+    depends_on:
+      - db
+
+  post-service:
+    build: ./post-service
+    ports:
+      - "8082:8082"
+    environment:
+      - DYNAMODB_ENDPOINT=http://dynamodb:8000
+      - AWS_ACCESS_KEY_ID=dummy
+      - AWS_SECRET_ACCESS_KEY=dummy
+      - KAFKA_BROKER=kafka:9092
+    depends_on:
+      - dynamodb
+      - kafka
+
+  follow-service:
+    build: ./follow-service
+    ports:
+      - "8083:8083"
+    environment:
+      - REDIS_ADDR=redis:6379
+      - KAFKA_BROKER=kafka:9092
+    depends_on:
+      - redis
+      - kafka
+
+  timeline-service:
+    build: ./timeline-service
+    ports:
+      - "8084:8084"
+    environment:
+      - CASSANDRA_HOST=cassandra
+    depends_on:
+      - cassandra
+
+  worker:
+    build:
+      context: .  
+      dockerfile: timeline-worker/Dockerfile
+    depends_on:
+      - kafka
+      - follow-service
+      - post-service
+      - timeline-service
+
+  db:
+    image: postgres:15-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: pass
+      POSTGRES_DB: microblog
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7
+    ports:
+      - "6379:6379"
+
+  cassandra:
+    image: cassandra:4
+    ports:
+      - "9042:9042"
+    volumes:
+      - cassandradata:/var/lib/cassandra
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.3.2
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
+
+  kafka:
+    image: confluentinc/cp-kafka:7.3.2
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENERS: PLAINTEXT://:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    depends_on:
+      - zookeeper
+
+  dynamodb:
+    image: amazon/dynamodb-local
+    ports:
+      - "8000:8000"
+    command: "-jar DynamoDBLocal.jar -sharedDb"
+
+volumes:
+  pgdata:
+  cassandradata:
+
+networks:
+  default:
+    name: microblog_default

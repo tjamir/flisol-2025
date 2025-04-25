@@ -1,0 +1,28 @@
+syntax = "proto3";
+
+package follow;
+
+option go_package = "github.com/tjamir/flisol-2025/microblog/follow-service/proto";
+
+service FollowService {
+  rpc Follow(FollowRequest) returns (FollowResponse);
+  rpc ListFollowers(ListFollowersRequest) returns (ListFollowersResponse);
+}
+
+message FollowRequest {
+  string follower_id = 1;
+  string followee_id = 2;
+}
+
+message FollowResponse {}
+
+message ListFollowersRequest {
+  string user_id = 1; // O usuário seguido
+  int32 limit = 2;
+  string cursor = 3;
+}
+
+message ListFollowersResponse {
+  repeated string follower_ids = 1;
+  string next_cursor = 2;
+}
